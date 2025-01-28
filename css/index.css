@@ -1,0 +1,91 @@
+body {
+  margin: 0;
+}
+
+.content {
+  margin: 0 auto;
+  padding: 20px;
+  width: 300px;
+  font-family: Roboto, sans-serif;
+}
+
+.content h1 {
+  font-size: 22px;
+  text-align: center;
+}
+
+.content p {
+  font-size: 14px;
+  margin: 0;
+  text-align: left;
+}
+
+.content ul {
+  padding: 1em;
+  margin: 0;
+}
+
+.context-menu{
+  position: fixed;
+  bottom: 24px;
+  right: 38px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  transform: translate(100%, 0);
+  transition: transform 0.3s;
+  font-family: Roboto, sans-serif;
+}
+
+.context-menu--show{
+  transform: translate(38px, 0);
+}
+
+.context-menu__toggle{
+  background-color: rgb(115, 0, 230);
+  color: #fff;
+  padding: 20px 5px;
+  border-radius: 0 6px 6px 0;
+  writing-mode: vertical-lr;
+  transform: scale(-1, -1);
+  cursor: pointer;
+
+}
+
+.context-menu__container{
+  background-color: #fff;
+  border-radius: 8px 0 0 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.button-85{
+  cursor: pointer;
+  outline: 0;
+  display: inline-block;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: center;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: 6px 12px;
+  font-size: 1rem;
+  border-radius: 12px;
+  transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+  color: rgb(115, 0, 230);
+  border-color: rgb(115, 0, 230);
+}
+
+.button-85:hover {
+  color: #fff;
+  background-color: rgb(115, 0, 230);
+  border-color: rgb(115, 0, 230);
+}
+
+div[id^="billboard_btf"]{
+  display: none;
+}

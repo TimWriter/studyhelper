@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Studyhelper",
+  "description": " Your ultimate tool for a seamless StudyDrive experience.",
+  "version": "1.0.0",
+  "permissions": ["storage"],
+  "host_permissions": ["https://www.studydrive.net/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.studydrive.net/*"],
+      "css": ["./css/index.css"],
+      "js": ["content-script.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "icons": {
+    "128": "icons/icon.png"
+  },
+  "action": {
+    "default_icon": {
+      "32": "icons/icon.png"
+    },
+    "default_popup": "index.html",
+    "default_title": "Open Popup"
+  }
+}
