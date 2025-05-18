@@ -54,4 +54,4 @@ This extension is for personal use and educational purposes only. It is not aime
 **Enjoy a better study experience with StudyHelper!**
 
 --- 
-Works as of 28.01.2025
+Works as of 18.05.2025

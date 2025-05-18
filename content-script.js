@@ -1,148 +1,121 @@
 (() => {
-  let premium_read_count = 0;
-  const user_proxy_handler = {
+  // Proxy override for is_premium
+  let premiumReadCount = 0;
+  const userProxyHandler = {
     get(target, prop, receiver) {
-      if (prop === "is_premium") {
-        premium_read_count++;
-        if (premium_read_count === 1) {
-          return true;
-        }
+      if (prop === "is_premium" && premiumReadCount++ === 0) {
+        return true;
       }
       return Reflect.get(target, prop, receiver);
     },
   };
 
-  window.sdWindow = new Proxy(
-    {},
-    {
-      set(target, prop, value, receiver) {
-        if (prop === "user") {
-          value = new Proxy(value, user_proxy_handler);
-        }
-        return Reflect.set(target, prop, value, receiver);
-      },
-    }
-  );
+  window.sdWindow = new Proxy({}, {
+    set(target, prop, value, receiver) {
+      if (prop === "user") value = new Proxy(value, userProxyHandler);
+      return Reflect.set(target, prop, value, receiver);
+    },
+  });
 })();
 
-((open) => {
-  XMLHttpRequest.prototype.open = function (
-    method,
-    url,
-    async,
-    user,
-    password
-  ) {
-    if (url.match(/.*studydrive\.net\/file-preview/g)) {
-      this.addEventListener(
-        "load",
-        () => {
-          let blob = new Blob([this.response], { type: "application/pdf" });
-          let url = URL.createObjectURL(blob);
-          const contextMenu = addContextMenu();
-          addButtons(url, contextMenu);
-        },
-        false
-      );
-    }
-    open.apply(this, arguments);
+(() => {
+  const FILE_PREVIEW_REGEX = /studydrive\.net\/file-preview/;
+  const CONTAINER_ID = "jsA7AGx6o2Yi61DvK8iooXEeQtgnKR";
+  const BUTTON_CLASS = "button-85";
+  const BUTTON_TITLE = "Depending on browser settings, this may open or download the file.";
+
+  const getFilename = () => {
+    const match = window.location.href.match(/doc\/([^/]+)/);
+    return (match?.[1] || "studydrive-download") + ".pdf";
   };
 
-  const addContextMenu = () => {
-    const mk_toggle = () => {
-      let toggle = document.createElement("div");
-      toggle.classList.add("context-menu__toggle");
-      toggle.textContent = "Helper";
-      toggle.onclick = () => {
-        let container = document.querySelector(".context-menu");
-        if (container) {
-          container.classList.toggle("context-menu--show");
-        }
-      };
-      return toggle;
-    };
+  const createButton = (label, url, options = {}) => {
+    const btn = document.createElement("a");
+    btn.href = url;
+    btn.className = BUTTON_CLASS;
+    btn.role = "button";
+    btn.title = BUTTON_TITLE;
+    btn.textContent = label;
+    if (options.download) btn.download = getFilename();
+    if (options.target) btn.target = options.target;
+    return btn;
+  };
 
-    const mk_menu = () => {
-      let menu = document.createElement("div");
-      menu.classList.add("context-menu");
-      menu.appendChild(mk_toggle());
-      return menu;
-    };
-    const menu = mk_menu();
-    document.body.appendChild(menu);
+  const ensureContextMenu = () => {
+    let menu = document.querySelector(".context-menu");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.className = "context-menu";
+
+      const toggle = document.createElement("div");
+      toggle.className = "context-menu__toggle";
+      toggle.textContent = "Helper";
+      toggle.onclick = () => menu.classList.toggle("context-menu--show");
+
+      menu.appendChild(toggle);
+      document.body.appendChild(menu);
+    }
     return menu;
   };
 
-  const addButtons = (url, contextMenu) => {
-    const _id = "jsA7AGx6o2Yi61DvK8iooXEeQtgnKR";
+  const addButtons = (blobUrl) => {
+    document.getElementById(CONTAINER_ID)?.remove();
 
-    let el = document.getElementById(_id);
-    if (el) {
-      el.remove();
-    }
+    const container = document.createElement("div");
+    container.id = CONTAINER_ID;
+    container.className = "context-menu__container";
 
-    let m = window.location.href.match(/doc\/([^\/]+)/);
-    let name = "studydrive-download.pdf";
-    if (m && m[1]) {
-      name = m[1] + ".pdf";
-    }
+    container.appendChild(createButton("Open", blobUrl, { target: "_blank" }));
+    container.appendChild(createButton("Download", blobUrl, { download: true }));
 
-    const btn_title =
-      "Depending on the browser settings this might open and or download the file";
-
-    const mk_btn = (label, options) => {
-      let btn = document.createElement("a");
-      btn.href = url;
-      btn.classList.add("button-85");
-      btn.role = "button";
-      btn.title = btn_title;
-      btn.textContent = label;
-
-      if (options?.download) btn.download = name;
-      if (options?.target) btn.target = options.target;
-
-      return btn;
-    };
-
-    let container = document.createElement("div");
-    container.id = _id;
-    container.classList.add("context-menu__container");
-    container.appendChild(mk_btn("Open", { target: "_blank" }));
-    container.appendChild(mk_btn("Download", { download: true }));
-    contextMenu.appendChild(container);
+    ensureContextMenu().appendChild(container);
   };
-})(XMLHttpRequest.prototype.open);
 
+  const handleFilePreview = async (response) => {
+    const blob = new Blob([await response], { type: "application/pdf" });
+    const blobUrl = URL.createObjectURL(blob);
+    addButtons(blobUrl);
+  };
+
+  // Hook into XMLHttpRequest
+  const originalXHROpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (...args) {
+    const url = args[1];
+    if (FILE_PREVIEW_REGEX.test(url)) {
+      this.addEventListener("load", () => handleFilePreview(this.response));
+    }
+    return originalXHROpen.apply(this, args);
+  };
+
+  // Hook into Fetch
+  const originalFetch = window.fetch;
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input?.url || "";
+    const response = await originalFetch(input, init);
+
+    if (FILE_PREVIEW_REGEX.test(url)) {
+      const cloned = response.clone();
+      handleFilePreview(await cloned.arrayBuffer());
+    }
+
+    return response;
+  };
+})();
+
+// Remove overlay ads
 (() => {
   const removeAds = () => {
-    const body = document.querySelector("body");
+    const body = document.body;
+    if (!body) return console.error("Body tag not found!");
 
-    if (!body) {
-      console.error("Body tag not found!");
-      return;
-    }
-
-    const observerCallback = (mutationsList) => {
-      mutationsList.forEach((mutation) => {
-        if (
-          mutation.type === "attributes" &&
-          mutation.attributeName === "style"
-        ) {
-          const currentOverflow = getComputedStyle(body).overflow;
-          if (currentOverflow === "hidden") {
-            let el = document.querySelector(".overlay-background");
-            if (el) {
-              el.remove();
-            }
-            body.style.overflow = "visible";
-          }
+    new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === "style" && getComputedStyle(body).overflow === "hidden") {
+          document.querySelector(".overlay-background")?.remove();
+          body.style.overflow = "visible";
         }
-      });
-    };
-    const observer = new MutationObserver(observerCallback);
-    const config = { attributes: true, attributeFilter: ["style"] };
-
-    observer.observe(body, config);
+      }
+    }).observe(body, { attributes: true, attributeFilter: ["style"] });
   };
 
   document.addEventListener("DOMContentLoaded", removeAds);

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Studyhelper",
   "description": " Your ultimate tool for a seamless StudyDrive experience.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "permissions": ["storage"],
   "host_permissions": ["https://www.studydrive.net/*"],
   "content_scripts": [
